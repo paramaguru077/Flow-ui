@@ -9,21 +9,22 @@ import {
   AlertDialogTitle, AlertDialogTrigger
 } from "@/components/ui/alert-dialog"
 import { inputTypes } from '@/Type'; 
-import { Button } from '@/components/ui/button';
+import OrderTable from './OrderTable';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
-import Header from './Header'
+import Header from './Header';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
   Pagination,
   PaginationContent,
-  PaginationEllipsis,
   PaginationItem,
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
+import { usePathname } from 'next/navigation';
+import ProductTable from './ProductTable';
 
 const UserTable = () => {
   const [userData, setUserData] = useState<inputTypes[]>([]);
@@ -35,9 +36,14 @@ const UserTable = () => {
   
   const [totalPage, setTotalPage] = useState(1);
   const searchParams = useSearchParams();
+  const pathname = usePathname();
   const router = useRouter();
   const name = searchParams.get("name") || "";
   const country = searchParams.get("country") || "";
+ const page = parseInt(searchParams.get("page") || "1", 10);
+  const[searchValue,setSearchValue]= useState(searchParams.get("name")?.trim()||"");
+  const [searchCountry, setSearchCountry] = useState(searchParams.get( "country")?.trim() || "");
+
 
   const fetchApi = async () => {
     try {
@@ -63,9 +69,10 @@ const UserTable = () => {
     }
   }
 
+
   useEffect(() => {
     fetchApi();
-  }, [name, country,searchParams]);
+  }, [searchValue, searchCountry,searchParams]);
 
   const handleEdit = (user: inputTypes) => {
     setSelectUser(user)
@@ -82,18 +89,51 @@ const UserTable = () => {
     router.push(`?${newParams.toString()}`);
   };
 
+  useEffect(()=>{
+          const params = new URLSearchParams();
+          if(searchValue){
+              params.set("name",searchValue);
+  
+          }
+          if (searchCountry) params.set( "country" , searchCountry);
+          router.push(`?${params.toString()}`);
+  
+      },[searchValue,searchCountry])
+
+
+      const handleFilterChanges = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+      const { name, value } = e.target;
+      if (name === "name") setSearchValue(value);
+      else setSearchCountry(value);
+    };
+  
+
 
   return (
-    <div>
+    <div >
   
       <Header
+        type ="customer"
         onCreate={() => fetchApi()}
         selectedUser={selectUser}
         onClearEdit={() => setSelectUser(null)}
         openDialog={openDialog}
         setOpenDialog={setOpenDialog}
+        searchValue={searchValue}
+        searchCountry={searchCountry}
+        setSearchValue={setSearchValue}
+        setSearchCountry={setSearchCountry}
+        handleFilterChanges={handleFilterChanges}
+       
       />
-      <div className='bg-white mt-3 rounded-2xl m-3 p-3'>
+      <div className='bg-white mt-3 rounded-2xl m-3 p-3 dark:bg-black'>
+       {/* {
+          pathname.includes("/products")?(
+             <ProductTable/>
+          ):(
+
+          
+        }*/}
         {
           isInitialLoading ? (
             <Table>
@@ -109,7 +149,9 @@ const UserTable = () => {
                 ))}
               </TableBody>
             </Table>
-          ) : userData.length > 0 ? (
+          ):pathname.includes("product")?(
+            <ProductTable/>
+          ):pathname.includes("order")?(<OrderTable/>) : userData.length > 0 ? (
             <>
               <Table>
                 <TableHeader>
@@ -154,14 +196,36 @@ const UserTable = () => {
                 </TableBody>
               </Table>
               <div className='flex justify-between mt-5'>
-                <Button variant="destructive" className=" ring-1 bg-black/90"disabled={parseInt(searchParams.get('page') || '1') === 1}
-                  onClick={() => handlePageChange(parseInt(searchParams.get('page') || '1') - 1)}>
-                  Previous
-                </Button>
-                <Button variant="default" disabled={totalPage<1} className='border border-blue-700 bg-blue-400'
-                  onClick={() => handlePageChange(parseInt(searchParams.get('page') || '1') + 1)}>
-                  Next
-                </Button>
+                 <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious href="#"
+                      onClick={(e)=>{e.preventDefault(); handlePageChange(page-1)}}
+                      className={page == 1 ? "pointer-events-none opacity-50" : ""} />
+                    </PaginationItem>
+                    {
+                     Array.from({ length: totalPage }).map((_, i) => (
+                                  <PaginationItem key={i}>
+                                    <PaginationLink href="#" isActive={page === i + 1}
+                                      onClick={(e) => { e.preventDefault(); handlePageChange(i + 1) }}>
+                                      {i + 1}
+                                    </PaginationLink>
+                                  </PaginationItem>
+                                ))
+
+                    }
+                    
+                   
+                    <PaginationItem>
+                      <PaginationNext href="#"
+                      onClick={(e) => { e.preventDefault(); handlePageChange(page + 1); }}
+                      className= {page==totalPage?"pointer-events-none opacity-50":""}/>
+
+
+                    </PaginationItem>
+                  </PaginationContent>
+              </Pagination>
+                
               </div>
             </>
           ) : (
@@ -171,22 +235,7 @@ const UserTable = () => {
           )
         }
       </div>
-      <Pagination>
-  <PaginationContent>
-    <PaginationItem>
-      <PaginationPrevious href="#" />
-    </PaginationItem>
-    <PaginationItem>
-      <PaginationLink href="#">1</PaginationLink>
-    </PaginationItem>
-    <PaginationItem>
-      <PaginationEllipsis />
-    </PaginationItem>
-    <PaginationItem>
-      <PaginationNext href="#" />
-    </PaginationItem>
-  </PaginationContent>
-</Pagination>
+     
 
     </div>
   )

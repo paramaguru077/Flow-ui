@@ -25,7 +25,7 @@ export const GET = async (req: NextRequest) => {
             .select()
             .from(datas)
             .where(conditions.length > 0 ? and(...conditions) : undefined)
-            .orderBy(datas.id)
+            .orderBy(sql`${datas.id} DESC`)
             .limit(limit)
             .offset(offset);
 
@@ -33,7 +33,7 @@ export const GET = async (req: NextRequest) => {
 
         // Total count also needs to apply the same filter for accurate pagination
         const totalQuery = db
-            .select({ count: sql<number>`count(*)` })
+            .select({ count: sql<number>`count(*) ` })
             .from(datas)
             .where(conditions.length > 0 ? and(...conditions) : undefined);
 
